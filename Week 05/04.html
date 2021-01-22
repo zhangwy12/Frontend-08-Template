@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    let callbacks = new Map();
+
+    let usedReactivities = []
+    let object = {
+        a: 1,
+        b: 2
+    }
+
+    let OBJ = reactive(object)
+
+    effect(() => {
+        console.log(OBJ.a)
+    })
+
+    function effect(callback) {
+        usedReactivities = [];
+        callback();
+        console.log(usedReactivities)
+
+        for (let reactity of usedReactivities) {
+            if (!callbacks.has(reactity[0])) {
+                callbacks.set(reactity[0], new Map())
+            }
+            if (!callbacks.get(reactity[0]).has(reactity[1])) {
+                callbacks.get(reactity[0]).set(reactity[1], [])
+            }
+            callbacks.get(reactity[0]).get(reactity[1]).push(callback)
+        }
+    }
+
+    function reactive (object) {
+        return new Proxy(object, {
+            set(obj, prop, val){
+                obj[prop] = val;
+                console.log(obj, prop, val, '11111');
+
+                if (callbacks.get(obj))
+                    if (callbacks.get(obj).get(prop))
+                        for (let callback of callbacks.get(obj).get(prop)) {
+                            callback()
+                        }
+                return obj[prop]
+            },
+            get(obj, prop){
+                usedReactivities.push([obj, prop])
+                console.log(obj, prop, '22222222');
+                return obj[prop]
+            }
+        })
+    }
+</script>
+</body>
+</html>

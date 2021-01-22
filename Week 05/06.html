@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<input type="text" id="oInput">
+<input type="range" id="g" min=0 max=200>
+<script>
+    let callbacks = new Map();
+
+    let reactivities = new Map();
+    let usedReactivities = []
+    let object = {
+        r: 1,
+        g: 2
+    }
+
+    let OBJ = reactive(object)
+
+    effect(() => {
+        document.getElementById('oInput').value = OBJ.r
+    })
+    effect(() => {
+        document.getElementById('g').value = OBJ.g
+    })
+
+
+    document.getElementById('oInput').addEventListener('input', event => OBJ.r = event.target.value);
+    document.getElementById('g').addEventListener('input', event => OBJ.g = event.target.value);
+
+    function effect(callback) {
+        usedReactivities = [];
+        callback();
+        console.log(usedReactivities)
+
+        for (let reactity of usedReactivities) {
+            if (!callbacks.has(reactity[0])) {
+                callbacks.set(reactity[0], new Map())
+            }
+            if (!callbacks.get(reactity[0]).has(reactity[1])) {
+                callbacks.get(reactity[0]).set(reactity[1], [])
+            }
+            callbacks.get(reactity[0]).get(reactity[1]).push(callback)
+        }
+    }
+
+    function reactive (object) {
+        if (reactivities.has(object))
+            return reactivities.get(object)
+
+        let proxy = new Proxy(object, {
+            set(obj, prop, val){
+                obj[prop] = val;
+
+                if (callbacks.get(obj))
+                    if (callbacks.get(obj).get(prop))
+                        for (let callback of callbacks.get(obj).get(prop)) {
+                            callback()
+                        }
+                return obj[prop]
+            },
+            get(obj, prop){
+                usedReactivities.push([obj, prop])
+                if (typeof obj[prop] === 'object') {
+                    return reactive(obj[prop])
+                }
+                return obj[prop]
+            }
+        })
+
+        reactivities.set(object, proxy);
+
+        return proxy
+    }
+</script>
+</body>
+</html>
